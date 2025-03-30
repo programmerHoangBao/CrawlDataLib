@@ -28,10 +28,8 @@ def extract_ram_value(input_str):
         raise ValueError("No numeric value found in the input string.")
 
 
-
-
 def main():
-    url = "https://www.thegioididong.com/dtdd-samsung#c=42&m=2&o=13&pi=1"
+    url = "https://www.thegioididong.com/dtdd-samsung"
     selector_ul = "#categoryPage > div.container-productbox > ul"
 
     # Retrieve page source using Selenium

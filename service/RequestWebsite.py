@@ -210,3 +210,54 @@ class CrawlData:
             driver.quit()  # Close the browser
 
         return page_source
+    
+    @staticmethod
+    def get_child_selectors_by_tag(page_source, parent_selector, child_tag, child_class=None):
+        """
+        The function of extracting the selector of the sub -attribute from a parent attribute
+        Args:
+            page_source (str): Source HTML of the website.
+            parent_selector (str): Selector of Cha.
+            child_tag (str): The HTML card I need to take (for example: 'Li', 'A', ...).
+            child_class (str): (No required) Class of the sub -attribute.
+
+        Returns:
+            List of selectors of sub -attributes.
+        """
+        soup = BeautifulSoup(page_source, 'html.parser')
+        parent_element = soup.select_one(parent_selector)
+        if not parent_element:
+            raise ValueError("The father's element was not found with Selector.")
+    
+        if child_class:
+            child_elements = parent_element.find_all(child_tag, class_=child_class)
+        else:
+            child_elements = parent_element.find_all(child_tag)
+    
+        selectors = []
+        for element in child_elements:
+            selector = f"{child_tag}"
+            if 'class' in element.attrs:
+                class_name = "." + ".".join(element['class'])
+                selector += class_name
+            selectors.append(selector)
+    
+        return selectors
+    
+    @staticmethod
+    def check_selector_exists(page_source, selector):
+        """
+        Check if Selector exists on the website.
+
+        Args:
+            page_source (str): Source HTML of the website.
+            selector (str): Selector needs to check.
+
+        Returns:
+            bool: True if Selector exists, False otherwise.
+        """
+        soup = BeautifulSoup(page_source, 'html.parser')
+        element = soup.select_one(selector)
+        return element is not None
+
+

@@ -1,52 +1,72 @@
 from service.RequestWebsite import CrawlData
-import service.JsonService as JsonService
-import service.MongodbService as MongodbService
+import service.FileTextService as FileTextService
+import re
+
+
+def standardize_currency(input_str):
+    """
+    Standardizes a currency string into an integer.
+    
+    :param input_str: The input currency string (e.g., "9.490.000đ")
+    :return: An integer representing the standardized value (e.g., 9490000)
+    """
+    # Remove dots, commas, and non-digit characters using regular expressions
+    standardized_str = re.sub(r'[^\d]', '', input_str)
+    return int(standardized_str)
+
+def extract_ram_value(input_str):
+    """
+    Extracts the numeric value of RAM from a given string.
+    
+    :param input_str: The input string (e.g., "RAM: 8 GB")
+    :return: The extracted numeric value as an integer (e.g., 8)
+    """
+    match = re.search(r'\d+', input_str)  # Search for the first numeric sequence in the string
+    if match:
+        return int(match.group())
+    else:
+        raise ValueError("No numeric value found in the input string.")
+
+
+
 
 def main():
-    url = "https://dichvucong.gov.vn/p/home/dvc-cau-hoi-pho-bien.html"
-    next_click_xpath = "/html/body/div[5]/div/div/div[5]/div[2]/ul/li[8]/a"
-    selector_div_link_question = "#tatCa > div:nth-child(1)"
-    selector_question = "h1.main-title-sub"
-    selector_answer = ".article > p:nth-child(3)"
-    base_url = "https://dichvucong.gov.vn"
-    uri = "mongodb+srv://bao:123@cluster0.vkixc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    database_name = "DichVuCong"
-    collection_name = "Question"
-    file_path = "./Big_Data/Crawl_Data/Data/DichVuCong.json"
-    total_page = 2
-    current_page = 1
-    page_source = None
-    link_questions = []
-    list_question = []
+    url = "https://www.thegioididong.com/dtdd-samsung#c=42&m=2&o=13&pi=1"
+    selector_ul = "#categoryPage > div.container-productbox > ul"
 
-    for page in range(1, total_page+1):
-        if current_page != 1:
-            page_source = CrawlData.simulate_click_XPATH(URL=url, XPATH=next_click_xpath)
+    # Retrieve page source using Selenium
+    page_source = CrawlData.get_page_source_selenium(url)
+
+    # CSS selectors for product details
+    n = 9
+    products = []
+    selector_li = ""
+    selector_name = ""
+    selector_current_price = ""
+    selector_old_price = ""
+    selector_RAM = ""
+
+    # Loop to process multiple products
+    for i in range(1, n + 1):
+        selector_li = f"#categoryPage > div.container-productbox > ul > li:nth-child({i})"
+        selector_name = f"{selector_li} > a > h3"
+        selector_current_price = f"{selector_li} > a > strong"
+        selector_old_price = f"{selector_li} > a > div.box-p > p"
+        selector_RAM = f"{selector_li} > div.utility > p:nth-child(2)"
+
+        # Extract product details using CrawlData methods
+        id = CrawlData.get_attribute_value(page_source, selector_li, "data-id").pop()
+        name = CrawlData.get_attribute_value(page_source, selector_name).pop()
+        current_price = standardize_currency(CrawlData.get_attribute_value(page_source, selector_current_price).pop())
+        old_price = standardize_currency(CrawlData.get_attribute_value(page_source, selector_old_price).pop())
+        ram = extract_ram_value(CrawlData.get_attribute_value(page_source, selector_RAM).pop())
+
+        # Format result and save to TXT file
+        result = f"({id},{name},{current_price},{old_price},{ram})"
+        if FileTextService.check_txt_file_exists("samsung.txt"):
+            FileTextService.add_data_to_txt_file("samsung.txt", result)
         else:
-            page_source = CrawlData.get_page_source_selenium(url)
-
-        if page_source is not None:
-            list_selector_a = CrawlData.get_child_selectors(page_source, selector_div_link_question)
-            for selector_a in list_selector_a:
-                set_href = CrawlData.get_attribute_value(page_source, selector_a, attribute="href", base_url=base_url)
-                for link in set_href:
-                    link_questions.append(link)
-            
-            for link_question in link_questions:
-                question = CrawlData.get_attribute_value_with_selenium(url=link_question, selector=selector_question)
-                answer = CrawlData.get_attribute_value_with_selenium(url=link_question, selector=selector_answer)
-                list_question.append({"question": question.pop(), "answer": answer.pop()})
-
-    if len(list_question) != 0:
-        JsonService.overwrite_data_to_json(data=list_question, dir_path="./Big_Data/Crawl_Data/Data", file_name="DichVuCong.json")
-    else:
-        print("No data!")
-    if (JsonService.json_file_exists(file_path)):
-        MongodbService.upload_json_to_mongodb(uri=uri, database_name=database_name, collection_name=collection_name, file_path=file_path)
+            FileTextService.create_txt_file("samsung.txt", result)
 
 if __name__ == "__main__":
     main()
-
-
-                
-        
